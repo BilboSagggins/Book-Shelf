@@ -1,6 +1,6 @@
 # Kyle's Bookshelf
 
-A 3D bookcase for tracking what you read. Live at **https://bilbosagggins.github.io/book-shelf/** once GitHub Pages is on.
+A 3D bookcase for tracking what you read. Live at **https://bilbosagggins.github.io/Book-Shelf/** once GitHub Pages is on.
 
 - Three shelves: **Read**, **Reading now**, **Want to read**. Full shelves continue onto a new plank.
 - Tap a spine to take the book down and see its cover. Open it for the jacket blurb and similar books.
