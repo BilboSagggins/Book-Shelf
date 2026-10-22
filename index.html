@@ -76,22 +76,32 @@ textarea{resize:vertical;min-height:60px}
 .stars button.on{color:var(--brass)}
 
 /* ---------- Bookcase ---------- */
-.case{background:var(--wall);border-radius:6px;padding:10px 10px 14px;display:flex;flex-direction:column;gap:14px;
+.case{background:var(--wall);border-radius:6px;padding:8px 10px 10px;display:flex;flex-direction:column;
   box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 18px 40px -20px rgba(0,0,0,.5)}
-.bay{display:flex;flex-direction:column}
-.bay-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 8px 4px;color:var(--paper)}
-.bay-head h2{font-size:20px;color:var(--paper)}
-.bay-head .count{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--plank-top)}
-.nook{border-radius:3px 3px 0 0;
+@media (min-height:620px){
+  .case{position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+}
+.case-top{display:flex;justify-content:space-between;align-items:center;gap:6px 12px;flex-wrap:wrap;padding:0 2px 8px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;min-width:0}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--plank-top);font-family:var(--f-display);font-size:17px;padding:4px 8px 3px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--paper);border-color:var(--brass)}
+.tabs button span{font-family:var(--f-mono);font-size:11px;margin-left:6px;opacity:.85}
+.sortl{flex-direction:row;align-items:center;gap:6px;color:var(--plank-top);font-size:12px}
+.sortl select{background:var(--wall-deep);color:var(--paper);border:1px solid var(--plank-edge);padding:4px 8px;font-size:13px}
+.nook{border-radius:3px 3px 0 0;touch-action:pan-y;
   background:
     linear-gradient(to top,var(--plank-top) 0 14px,transparent 14px),
     linear-gradient(to bottom,rgba(0,0,0,.55),transparent 34px),
     linear-gradient(to right,rgba(0,0,0,.35),transparent 18px,transparent calc(100% - 18px),rgba(0,0,0,.35)),
     var(--wall-deep)}
-.spines{display:flex;align-items:flex-end;gap:2px;min-height:246px;padding:28px 22px 9px;box-sizing:border-box}
-.bay .lip+.nook{margin-top:10px}
+.spines{display:flex;align-items:flex-end;gap:2px;min-height:232px;padding:22px 22px 9px;box-sizing:border-box}
 .lip{height:16px;background:linear-gradient(to bottom,var(--plank),var(--plank-edge));border-radius:0 0 3px 3px;box-shadow:0 8px 12px -8px rgba(0,0,0,.7)}
 .empty-shelf{align-self:center;color:var(--plank-top);font-size:14px;padding:0 6px 24px;max-width:34ch}
+.case-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px 0;color:var(--plank-top);font-size:12px}
+.pager{display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--paper)}
+.pager button{width:34px;height:34px;border-radius:50%;border:1px solid var(--plank);background:var(--wall-deep);color:var(--paper);font-size:18px;line-height:1;padding:0}
+.pager button:disabled{opacity:.3;cursor:default}
 
 .bk{position:relative;flex:none;padding:0;border:0;background:none;width:var(--w);height:var(--h);margin-right:5px;
   transform-origin:50% 100%;transform:rotateZ(var(--lean,0deg));transition:transform .25s cubic-bezier(.2,.7,.2,1)}
@@ -122,11 +132,14 @@ textarea{resize:vertical;min-height:60px}
 
 /* ---------- Pulled book overlay ---------- */
 .ov{position:fixed;inset:0;z-index:50;background:var(--scrim);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
-  overflow-y:auto;overflow-x:hidden;opacity:0;transition:opacity .35s ease}
+  overflow:hidden;opacity:0;transition:opacity .35s ease}
 .ov.show{opacity:1}
-.ov-inner{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:22px;
-  padding-block:calc(18px + env(safe-area-inset-top,0px)) calc(40px + env(safe-area-inset-bottom,0px));
+.ov-inner{height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ctl-scroll{flex:1;min-height:0;width:100%;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;
+  padding:6px 0 calc(32px + env(safe-area-inset-bottom,0px));
+  -webkit-mask-image:linear-gradient(transparent,#000 14px);mask-image:linear-gradient(transparent,#000 14px)}
 .stage{position:relative;width:100%;height:calc(var(--H) + 40px);perspective:1500px;perspective-origin:50% 40%;display:grid;place-items:center;flex:none}
 .hb{position:relative;width:var(--W);height:var(--H);transform-style:preserve-3d;transition:transform .75s cubic-bezier(.3,.7,.2,1)}
 .hb > *{position:absolute;box-sizing:border-box}
@@ -270,7 +283,6 @@ textarea{resize:vertical;min-height:60px}
   </div>
 
   <div class="case" id="shelves"></div>
-  <p class="note" style="margin:-18px 0 0">Tap a spine to take the book down.</p>
 
   <section style="display:flex;flex-direction:column;gap:16px">
     <div class="recs-head">
@@ -289,7 +301,7 @@ textarea{resize:vertical;min-height:60px}
 <div class="ov" id="ov" hidden role="dialog" aria-modal="true" aria-labelledby="ctlTitle">
   <div class="ov-inner" id="ovInner">
     <div class="stage" id="stage"><div class="hb" id="hb"></div></div>
-    <div class="ctl" id="ctl"></div>
+    <div class="ctl-scroll" id="ctlScroll"><div class="ctl" id="ctl"></div></div>
   </div>
 </div>
 <input type="file" id="coverFile" accept="image/*" hidden>
@@ -300,7 +312,17 @@ const SHELVES=[["read","Read"],["reading","Reading now"],["want","Want to read"]
 const CLOTH=[["#2F4F6B","#F1E9D2"],["#7A2E2E","#F3E3C8"],["#3E5B3A","#EDE6CF"],["#C9A64A","#2A2418"],["#1F2A2E","#D9C690"],["#6B4B7A","#F1E6EF"],["#B5643A","#FBEFE2"],["#D8D2C2","#2E2A22"],["#2D6A6A","#E7F1EC"],["#8C3B57","#F6E4EA"],["#4A4E6B","#E9E6D6"],["#9AA36C","#1F2416"],["#14375E","#F2C14E"],["#E3B23C","#1D1A16"]];
 const STANDALONE=!window.claude;
 const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
-let lastShelfWidth=0; let books=[]; let db=null, sample=null, assets=null; let formRating=0;
+let lastShelfWidth=0, lastAvail=600;
+const SORT_LABELS={added:"Shelf order",rating:"Your rating",title:"Title",author:"Author"};
+const SORTS={added:(a,b)=>(a.added||0)-(b.added||0),rating:(a,b)=>(b.rating||0)-(a.rating||0)||(a.added||0)-(b.added||0),title:(a,b)=>a.title.localeCompare(b.title),author:(a,b)=>surname(a.author).localeCompare(surname(b.author))||a.title.localeCompare(b.title)};
+let tab="read",sortBy="added";const pageOf={read:0,reading:0,want:0};
+try{tab=localStorage.getItem("kyle-bookshelf-v1-tab")||"read";sortBy=localStorage.getItem("kyle-bookshelf-v1-sort")||"added"}catch{}
+if(!["read","reading","want"].includes(tab))tab="read"; if(!SORTS[sortBy])sortBy="added";
+const shelfList=k=>books.filter(b=>b.status===k).sort(SORTS[sortBy]);
+function paginate(list,avail){const pages=[[]];let used=0;for(const b of list){const w=look(b).sw+7;if(used+w>avail&&pages[pages.length-1].length){pages.push([]);used=0}pages[pages.length-1].push(b);used+=w}return pages}
+const preloaded=new Set();
+function preload(url){if(!url||preloaded.has(url))return;preloaded.add(url);const i=new Image();i.decoding="async";i.src=url}
+ let books=[]; let db=null, sample=null, assets=null; let formRating=0;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const hash=s=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0};
@@ -316,7 +338,8 @@ function look(b){
   return {h,c,ci,c2,ci2,tpl:(h>>>9)%4,
     sh:150+(h>>>4)%62, sw:pg?Math.round(Math.max(24,Math.min(58,16+pg/13))):28+(h>>>8)%18};
 }
-const hasCover=b=>!!(b.coverId||(STANDALONE&&b.olCover));
+const coverURL=(b,size)=>!STANDALONE?"":b.olCid?`https://covers.openlibrary.org/b/id/${+b.olCid}-${size}.jpg`:b.olCover?b.olCover.replace(/-[SML]\.jpg$/,`-${size}.jpg`):"";
+const hasCover=b=>!!(b.coverId||coverURL(b,"M"));
 function lum(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return (0.299*r+0.587*g+0.114*b)/255}
 const surname=a=>String(a||"").trim().split(/\s+/).pop();
 
@@ -355,45 +378,53 @@ function render(){
   $("exampleBanner").hidden=!books.some(b=>b.example);
 
   const wrap=$("shelves");
-  wrap.innerHTML="";
-  const avail=Math.max(160,wrap.clientWidth-20-44);
+  const counts=Object.fromEntries(SHELVES.map(([k])=>[k,books.filter(b=>b.status===k).length]));
+  wrap.innerHTML=`<div class="case-top"><div class="tabs" role="tablist" aria-label="Shelves">${SHELVES.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===tab}">${l}<span>${counts[k]}</span></button>`).join("")}</div>
+    <label class="sortl">Sort<select id="sortSel">${Object.entries(SORT_LABELS).map(([k,l])=>`<option value="${k}"${k===sortBy?" selected":""}>${l}</option>`).join("")}</select></label></div>
+    <div class="nook" id="nook"><div class="spines" id="spines"></div></div><div class="lip"></div>
+    <div class="case-foot"><span>Tap a spine to take a book down</span><div class="pager" id="pager"><button id="pgPrev" aria-label="Previous books">‹</button><span id="pgLbl"></span><button id="pgNext" aria-label="More books">›</button></div></div>`;
   lastShelfWidth=wrap.clientWidth;
-  for(const [key,label] of SHELVES){
-    const list=books.filter(b=>b.status===key).sort((a,b)=>(a.added||0)-(b.added||0));
-    const s=document.createElement("section");s.className="bay";
-    s.innerHTML=`<div class="bay-head"><h2>${label}</h2><span class="count">${list.length} ${list.length===1?"BOOK":"BOOKS"}</span></div>`;
-    // fill a plank until it's full, then start another plank below
-    const rows=[[]];let used=0;
-    for(const b of list){const w=look(b).sw+7;if(used+w>avail&&rows[rows.length-1].length){rows.push([]);used=0}rows[rows.length-1].push(b);used+=w}
-    rows.forEach((row,ri)=>{
-      const nook=document.createElement("div");nook.className="nook";
-      const sp=document.createElement("div");sp.className="spines";nook.append(sp);
-      const lip=document.createElement("div");lip.className="lip";
-      if(!list.length) sp.innerHTML=`<span class="empty-shelf">${key==="want"?"Nothing queued yet. Add a book, or take one from a recommendation.":key==="reading"?"Nothing open right now.":"Finished books land here."}</span>`;
-      row.forEach((b,i)=>{
-        const L=look(b);
-        const el=document.createElement("button");
-        el.className="bk"+(held&&held.id===b.id&&held.away?" gone":"")+(b.example?" example":"");
-        el.dataset.id=b.id;
-        const last=ri===rows.length-1&&i===row.length-1;
-        const lean=(last&&row.length>2&&avail-row.reduce((t,x)=>t+look(x).sw+7,0)>60)?"-4deg":"0deg";
-        el.style.cssText=`--w:${L.sw}px;--h:${L.sh}px;--c:${L.c};--ci:${L.ci};--lean:${lean}`;
-        el.setAttribute("aria-label",`${b.title} by ${b.author}${b.rating?`, rated ${b.rating} of 5`:""}. Take it down.`);
-        el.innerHTML=`<span class="bk-top"></span><span class="bk-side"></span><span class="sp s${L.tpl}${hasCover(b)?" photo":""}"><span class="t">${esc(b.title)}</span><span class="a">${esc(surname(b.author))}</span></span>`;
-        el.onclick=()=>pickUp(b.id,el);
-        sp.append(el);
-      });
-      s.append(nook,lip);
-    });
-    wrap.append(s);
-  }
+  lastAvail=Math.max(160,$("nook").clientWidth-44);
+  const list=shelfList(tab);
+  const pgs=paginate(list,lastAvail);
+  pageOf[tab]=Math.max(0,Math.min(pageOf[tab]||0,pgs.length-1));
+  const row=pgs[pageOf[tab]]||[];
+  const sp=$("spines");
+  if(!list.length) sp.innerHTML=`<span class="empty-shelf">${tab==="want"?"Nothing queued yet. Add a book, or take one from a recommendation.":tab==="reading"?"Nothing open right now.":"Finished books land here."}</span>`;
+  const used=row.reduce((t,x)=>t+look(x).sw+7,0);
+  row.forEach((b,i)=>{
+    const L=look(b);
+    const el=document.createElement("button");
+    el.className="bk"+(held&&held.id===b.id&&held.away?" gone":"")+(b.example?" example":"");
+    el.dataset.id=b.id;
+    const lean=(i===row.length-1&&row.length>2&&lastAvail-used>60)?"-4deg":"0deg";
+    el.style.cssText=`--w:${L.sw}px;--h:${L.sh}px;--c:${L.c};--ci:${L.ci};--lean:${lean}`;
+    el.setAttribute("aria-label",`${b.title} by ${b.author}${b.rating?`, rated ${b.rating} of 5`:""}. Take it down.`);
+    el.innerHTML=`<span class="bk-top"></span><span class="bk-side"></span><span class="sp s${L.tpl}${hasCover(b)?" photo":""}"><span class="t">${esc(b.title)}</span><span class="a">${esc(surname(b.author))}</span></span>`;
+    el.onclick=()=>pickUp(b.id,el);
+    el.onpointerenter=el.onfocus=el.onpointerdown=()=>preload(coverURL(b,"L"));
+    preload(coverURL(b,"M"));
+    sp.append(el);
+  });
+  const start=pgs.slice(0,pageOf[tab]).reduce((t,p)=>t+p.length,0);
+  $("pager").hidden=pgs.length<2;
+  $("pgLbl").textContent=`${start+1}–${start+row.length} of ${list.length}`;
+  $("pgPrev").disabled=pageOf[tab]===0; $("pgNext").disabled=pageOf[tab]>=pgs.length-1;
+  $("pgPrev").onclick=()=>{pageOf[tab]--;render()};
+  $("pgNext").onclick=()=>{pageOf[tab]++;render()};
+  wrap.querySelectorAll("[data-tab]").forEach(t=>t.onclick=()=>{tab=t.dataset.tab;try{localStorage.setItem(LS+"-tab",tab)}catch{};render()});
+  $("sortSel").onchange=e=>{sortBy=e.target.value;try{localStorage.setItem(LS+"-sort",sortBy)}catch{};SHELVES.forEach(([k])=>pageOf[k]=0);render()};
+  let sx=null;const nook=$("nook");
+  nook.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});
+  nook.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;
+    if(Math.abs(dx)>50){const n=pageOf[tab]+(dx<0?1:-1);if(n>=0&&n<pgs.length){pageOf[tab]=n;render()}}});
   if(held)refreshHeld();
 }
 
 // ---- cover art
 function coverArt(b,L){
   if(b.coverId) return `<img src="/_blob/${esc(b.coverId)}" alt="Cover of ${esc(b.title)}">`;
-  if(STANDALONE&&b.olCover) return `<img src="${esc(b.olCover)}" alt="Cover of ${esc(b.title)}">`;
+  if(coverURL(b,"M")) return `<img src="${esc(coverURL(b,"M"))}" data-hi="${esc(coverURL(b,"L"))}" alt="Cover of ${esc(b.title)}">`;
   const ti=esc(b.title), au=esc(b.author);
   switch(L.tpl){
     case 0:return `<div class="cv t0"><span class="orb"></span><span class="ti">${ti}</span><span class="au">${au}</span></div>`;
@@ -409,8 +440,7 @@ const fetching={};
 const hb=$("hb"), ov=$("ov"), stage=$("stage");
 const REST="rotateY(-24deg) rotateX(5deg)";
 function dims(){
-  const W=Math.round(Math.min(270,innerWidth-90,(innerHeight-120)/1.5*0.9)); const H=Math.round(W*1.5);
-  return {W:Math.max(170,W),H:Math.max(255,H)};
+  const W=Math.round(Math.max(150,Math.min(270,innerWidth-90,(innerHeight*0.52-40)/1.5))); return {W,H:Math.round(W*1.5)};
 }
 function openScale(){const {W}=dims();return Math.min(1,(innerWidth-28)/(2*W))}
 function openTransform(){const {W}=dims();const k=openScale();return `translateX(${W*k/2}px) scale(${k}) rotateY(-3deg) rotateX(3deg)`}
@@ -423,8 +453,10 @@ function buildHeld(b){
     <div class="h-page"><div class="scroll" id="hPage"></div></div>
     <div class="h-spine"><span>${esc(b.title)}</span></div>
     <div class="h-cover"><div class="out" id="hOut">${coverArt(b,L)}</div><div class="in" id="hIn"></div></div>`;
-  held.coverKey=(b.coverId||"")+L.tpl;
+  held.coverKey=(b.coverId||coverURL(b,"M")||"")+L.tpl;
+  upgradeCover();
 }
+function upgradeCover(){const img=$("hOut")?.querySelector("img[data-hi]");if(!img)return;const hi=new Image();hi.onload=()=>{if(img.isConnected)img.src=hi.src};hi.src=img.dataset.hi}
 function anim(el,frames,ms){
   if(RM||!el.animate)return Promise.resolve();
   return el.animate(frames,{duration:ms,easing:"cubic-bezier(.25,.75,.2,1)"}).finished.catch(()=>{});
@@ -440,7 +472,7 @@ async function pickUp(id,el){
   if(busy||held)return; const b=books.find(x=>x.id===id); if(!b)return;
   busy=true; held={id,away:true,open:false};
   buildHeld(b); refreshHeld();
-  ov.hidden=false; document.documentElement.style.overflow="hidden"; $("ovInner").scrollTop=0;
+  ov.hidden=false; document.documentElement.style.overflow="hidden"; $("ctlScroll").scrollTop=0;
   requestAnimationFrame(()=>ov.classList.add("show"));
   const {dx,dy,sc}=shelfTransform(el);
   el.classList.add("gone");
@@ -463,6 +495,8 @@ function setOpen(v){
 async function putBack(){
   if(!held||busy)return; busy=true;
   if(held.open){setOpen(false);await new Promise(r=>setTimeout(r,RM?0:650))}
+  {const b=books.find(x=>x.id===held.id);if(b){const pages=paginate(shelfList(b.status),lastAvail);const pi=pages.findIndex(p=>p.some(x=>x.id===b.id));
+    if(b.status!==tab||(pi>=0&&pi!==pageOf[b.status])){tab=b.status;if(pi>=0)pageOf[tab]=pi;render()}}}
   const el=document.querySelector(`.bk[data-id="${CSS.escape(held.id)}"]`);
   if(el){
     el.scrollIntoView({block:"nearest",inline:"nearest"});
@@ -477,7 +511,7 @@ async function putBack(){
   const id=held.id; held=null; busy=false;
   document.querySelector(`.bk[data-id="${CSS.escape(id)}"]`)?.focus({preventScroll:true});
 }
-ov.addEventListener("click",e=>{if(e.target===ov||e.target.id==="ovInner"||e.target===stage)putBack()});
+ov.addEventListener("click",e=>{if(e.target===ov||e.target.id==="ovInner"||e.target===stage||e.target.id==="ctlScroll")putBack()});
 addEventListener("keydown",e=>{if(e.key==="Escape"&&held)putBack()});
 let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if($("shelves").clientWidth!==lastShelfWidth)render()},120);if(!held)return;const b=books.find(x=>x.id===held.id);if(!b)return;const o=held.open;buildHeld(b);refreshHeld();hb.classList.toggle("open",o);hb.style.transform=o?openTransform():REST});
 
@@ -487,9 +521,9 @@ function refreshHeld(){
   if(!b){ // removed elsewhere
     ov.classList.remove("show");setTimeout(()=>{ov.hidden=true;document.documentElement.style.overflow=""},RM?0:350);held=null;return}
   const L=look(b);
-  if(held.coverKey!==(b.coverId||"")+L.tpl||hb.style.getPropertyValue("--c")!==L.c){
+  if(held.coverKey!==(b.coverId||coverURL(b,"M")||"")+L.tpl||hb.style.getPropertyValue("--c")!==L.c){
     hb.style.setProperty("--c",L.c);hb.style.setProperty("--ci",L.ci);
-    const out=$("hOut"); if(out)out.innerHTML=coverArt(b,L); held.coverKey=(b.coverId||"")+L.tpl;
+    const out=$("hOut"); if(out)out.innerHTML=coverArt(b,L); held.coverKey=(b.coverId||coverURL(b,"M")||"")+L.tpl; upgradeCover();
   }
   // inside cover: bookplate
   const stars=b.rating?"★".repeat(b.rating)+"☆".repeat(5-b.rating):"";
@@ -499,14 +533,14 @@ function refreshHeld(){
   const pg=$("hPage");
   const top=pg.scrollTop;
   let blurb;
-  if(b.blurb) blurb=`<p class="blurb">${esc(b.blurb)}</p>`;
+  if(b.blurb&&!/^Open Library doesn't have/.test(b.blurb)) blurb=`<p class="blurb">${esc(b.blurb)}</p>`;
   else if(fetching[b.id]) blurb=`<p class="wait">Finding the jacket copy…</p>`;
   else if(fetching[b.id+"!"]) blurb=`<p class="wait">${esc(fetching[b.id+"!"])}</p><button class="btn small ghost" id="retryBlurb" style="justify-self:start;color:var(--paper-ink);border-color:#B9AD95">Try again</button>`;
   else if(!sample&&!STANDALONE) blurb=`<p class="wait">The blurb comes from Claude, which isn't available in this view.</p>`;
   else blurb=`<p class="wait">Open the book to read the jacket copy.</p>`;
   const sim=(b.similar||[]).map((s,i)=>{const have=books.some(x=>x.title.toLowerCase()===String(s.title).toLowerCase());
     return `<li><b>${esc(s.title)}</b><span class="by">${esc(s.author)}</span>${s.why?`<span>${esc(s.why)}</span>`:""}<button data-sim="${i}" ${have?"disabled":""}>${have?"On your shelves":"+ Want to read"}</button></li>`}).join("");
-  pg.innerHTML=`<h4>From the jacket</h4>${blurb}${sim?`<h4 style="margin-top:6px">Shelve it beside</h4><ul class="sim">${sim}</ul>`:""}`;
+  pg.innerHTML=`<h4>${b.blurb&&b.blurbSrc==="wikipedia"?"From Wikipedia":"From the jacket"}</h4>${blurb}${sim?`<h4 style="margin-top:6px">Shelve it beside</h4><ul class="sim">${sim}</ul>`:""}`;
   pg.scrollTop=top;
   pg.querySelectorAll("[data-sim]").forEach(btn=>btn.onclick=async()=>{const s=b.similar[+btn.dataset.sim];btn.disabled=true;btn.textContent="On your shelves";
     await saveBook({id:newId(),title:s.title,author:s.author,genre:s.genre||"",pages:+s.pages||0,status:"want",rating:0,added:Date.now()})});
@@ -588,6 +622,7 @@ $("addForm").addEventListener("submit",async e=>{
   const status=$("fStatus").value;
   const b={id:newId(),title:$("fTitle").value.trim(),author:$("fAuthor").value.trim(),genre:$("fGenre").value.trim(),pages:+$("fPages").value||0,status,rating:status==="read"?formRating:0,added:Date.now(),...(status==="read"?{finished:Date.now()}:{})};
   if(!b.title||!b.author)return;
+  tab=status;pageOf[status]=1e9;
   e.target.reset();setFormRating(0);$("fRateRow").hidden=false;$("addForm").hidden=true;
   await saveBook(b);
 });
@@ -705,23 +740,51 @@ const JUNK=/accessible|protected daisy|in library|large type|nyt:|overdrive|open
 const goodSubjects=list=>{const seen=new Set();const out=[];for(let x of list||[]){x=String(x).trim();const k=x.toLowerCase();if(!x||x.length>40||JUNK.test(x)||seen.has(k))continue;seen.add(k);out.push(x);if(out.length>=12)break}return out};
 const olJSON=async url=>{const r=await fetch(url);if(!r.ok)throw new Error("http "+r.status);return r.json()};
 const owned=t=>books.some(b=>b.title.toLowerCase().replace(/[^a-z0-9]/g,"")===String(t).toLowerCase().replace(/[^a-z0-9]/g,""));
+const shortTitle=t=>String(t).split(/\s*[:(]\s*|,\s+or\s+|\s+-\s+/i)[0].trim()||String(t);
+const qq=x=>String(x).replace(/["\\]/g," ").replace(/\s+/g," ").trim();
+async function olSearch(q){
+  const p=new URLSearchParams({q,limit:"1",lang:"en",fields:"key,title,cover_i,subject,number_of_pages_median,language,editions,editions.key,editions.cover_i,editions.language"});
+  return (await olJSON(OL+"/search.json?"+p))?.docs?.[0]||null;
+}
 async function olLookup(b){
-  const q=new URLSearchParams({title:b.title,author:b.author,limit:"1",fields:"key,cover_i,subject,number_of_pages_median"});
-  const doc=(await olJSON(OL+"/search.json?"+q))?.docs?.[0];
-  const f={olv:2};
-  if(doc){
-    f.olKey=doc.key; f.olSubjects=goodSubjects(doc.subject);
-    if(!b.pages&&doc.number_of_pages_median)f.pages=doc.number_of_pages_median;
-    if(doc.cover_i&&!b.coverId){f.olCover=`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;f.coverColor=await avgColor(`https://covers.openlibrary.org/b/id/${doc.cover_i}-S.jpg`)||look(b).c}
+  const t=qq(b.title),st=qq(shortTitle(b.title)),a=qq(b.author),sn=qq(surname(b.author));
+  const tries=[...new Set([`title:"${t}" author:"${a}" language:eng`,`title:"${st}" author:"${sn}" language:eng`,`${st} ${sn} language:eng`,`${st} ${sn}`])];
+  let doc=null;
+  for(const q of tries){doc=await olSearch(q);if(doc)break}
+  const f={olv:3};
+  if(!doc)return f;
+  const ed=doc.editions?.docs?.[0];
+  const edEng=ed&&(!ed.language||ed.language.includes("eng"));
+  f.olKey=doc.key; f.olEd=edEng?ed.key:null; f.olSubjects=goodSubjects(doc.subject);
+  if(!b.pages&&doc.number_of_pages_median)f.pages=doc.number_of_pages_median;
+  const cid=(edEng&&ed.cover_i)||doc.cover_i||null;
+  if(cid&&!b.coverId){
+    f.olCid=cid; f.olCover=null;
+    f.coverColor=await avgColor(`https://covers.openlibrary.org/b/id/${cid}-S.jpg`)||look(b).c;
+    preload(`https://covers.openlibrary.org/b/id/${cid}-M.jpg`);
   }
   return f;
+}
+async function wikiBlurb(b){
+  const st=shortTitle(b.title), sn=surname(b.author).toLowerCase();
+  for(const cand of [`${st} (novel)`,`${st} (book)`,st]){
+    try{
+      const r=await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(cand.replace(/ /g,"_")));
+      if(!r.ok)continue; const j=await r.json();
+      if(j.type==="disambiguation"||!j.extract)continue;
+      const about=(j.extract+" "+(j.description||"")).toLowerCase();
+      if(sn&&!about.includes(sn))continue;
+      return j.extract.trim();
+    }catch{}
+  }
+  return "";
 }
 let coverRun=false;
 async function findCovers(){
   if(!STANDALONE||coverRun)return; coverRun=true;
   try{
-    for(const b of books.filter(x=>x.olv!==2&&!x.coverId)){
-      try{Object.assign(b,await olLookup(b)); lsSave(); render();}catch{}
+    for(const b of books.filter(x=>x.olv!==3&&!x.coverId)){
+      try{const f=await olLookup(b);if(/^Open Library doesn't have/.test(b.blurb||""))f.blurb=null;Object.assign(b,f); lsSave(); render();}catch{}
       await new Promise(r=>setTimeout(r,300));
     }
   }finally{coverRun=false}
@@ -738,18 +801,21 @@ async function subjectBooks(subject,limit){
   return ((await olJSON(OL+"/search.json?"+q))?.docs||[]).filter(d=>d.title&&d.author_name);
 }
 async function olBlurb(b,force){
+  if(b.blurb&&!/^Open Library doesn't have/.test(b.blurb))return;
   if(fetching[b.id]||(!force&&fetching[b.id+"!"]))return;
   fetching[b.id]=true; if(held?.id===b.id)refreshHeld();
   try{
     let cur=books.find(x=>x.id===b.id)||b;
-    if(!cur.olKey){Object.assign(cur,await olLookup(cur));lsSave();}
     let blurb="",subjects=cur.olSubjects||[];
+    let src="openlibrary";
+    if(cur.olv!==3){Object.assign(cur,await olLookup(cur));lsSave();}
     if(cur.olKey){
       const w=await olJSON(OL+cur.olKey+".json");
       blurb=cleanDesc(w.description);
       if(!subjects.length)subjects=goodSubjects(w.subjects);
     }
-    if(!blurb)blurb="Open Library doesn't have a description for this book yet.";
+    if(!blurb&&cur.olEd){try{blurb=cleanDesc((await olJSON(OL+cur.olEd+".json")).description)}catch{}}
+    if(!blurb){blurb=await wikiBlurb(cur);src="wikipedia"}
     const similar=[];const seen=new Set([cur.title.toLowerCase()]);
     for(const subj of subjects.slice(0,3)){
       if(similar.length>=4)break;
@@ -759,8 +825,17 @@ async function olBlurb(b,force){
         if(similar.length>=4)break;
       }
     }
+    if(similar.length<3){
+      try{const p=new URLSearchParams({q:`author:"${qq(cur.author)}" language:eng`,sort:"rating",limit:"12",fields:"key,title,author_name,cover_i,number_of_pages_median"});
+        for(const d of (await olJSON(OL+"/search.json?"+p))?.docs||[]){
+          const k=String(d.title).toLowerCase(); if(!d.author_name||seen.has(k)||owned(d.title))continue; seen.add(k);
+          similar.push({title:d.title,author:d.author_name[0],genre:"",pages:d.number_of_pages_median||0,why:`Another book by ${d.author_name[0]}.`,cover:d.cover_i||0});
+          if(similar.length>=4)break;
+        }}catch{}
+    }
     delete fetching[b.id];
-    await patch(b.id,{blurb,similar,olSubjects:subjects});
+    if(blurb) await patch(b.id,{blurb,blurbSrc:src,similar,olSubjects:subjects});
+    else{ await patch(b.id,{similar,olSubjects:subjects}); fetching[b.id+"!"]="Neither Open Library nor Wikipedia has a description for this book."; if(held?.id===b.id)refreshHeld(); }
   }catch{
     delete fetching[b.id];
     fetching[b.id+"!"]="Couldn't reach Open Library. Check your connection.";
