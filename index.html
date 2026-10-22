@@ -213,6 +213,26 @@ textarea{resize:vertical;min-height:60px}
 .ctl h3{font-size:24px}
 .ctl .by{color:var(--muted)}
 .ctl .mainrow{display:flex;gap:10px;flex-wrap:wrap}
+/* "If you liked this": a strip of books right under the pulled book */
+.likes{width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.likes h4{margin:0;font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.lk-row{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.lk{flex:none;width:118px;display:flex;flex-direction:column;gap:4px;scroll-snap-align:start;min-width:0}
+.lk .th{width:100%;aspect-ratio:2/3;border-radius:2px;overflow:hidden;background:var(--c);color:var(--ci);box-shadow:2px 4px 10px -4px rgba(0,0,0,.45);
+  display:flex;align-items:flex-end;padding:8px;box-sizing:border-box;font-family:var(--f-display);font-size:13px;line-height:1.1;position:relative}
+.lk .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lk b{font-family:var(--f-display);font-weight:400;font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+.lk .by{font-size:12px;color:var(--muted)}
+.lk .why{font-size:12px;line-height:1.35;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lk button{align-self:start;margin-top:auto;background:none;border:1px solid var(--line);border-radius:3px;font-size:12px;padding:4px 8px}
+.lk button:disabled{opacity:.55}
+.likes .wait{font-size:13px;color:var(--muted);margin:0}
+/* a series sits together as a matched set, with its name on a little plate */
+.set{display:flex;align-items:flex-end;gap:0;position:relative;margin-right:6px}
+.set .bk{margin-right:1px}
+.set::after{content:attr(data-name);position:absolute;left:2px;right:2px;bottom:-10px;height:10px;text-align:center;font:500 8px/10px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--wall-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp .no{flex:none;font-family:var(--f-mono);font-size:9px;line-height:1;border:1px solid currentColor;border-radius:50%;min-width:15px;height:15px;display:grid;place-items:center;margin:2px 0 4px;opacity:.9}
 
 /* Recs */
 .recs-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:14px}
@@ -250,6 +270,8 @@ textarea{resize:vertical;min-height:60px}
       <label>Author<input id="fAuthor" required autocomplete="off"></label>
       <label>Genre<input id="fGenre" placeholder="e.g. Sci-fi" autocomplete="off"></label>
       <label>Pages<input id="fPages" type="number" min="1" inputmode="numeric"></label>
+      <label>Series<input id="fSeries" placeholder="Optional" autocomplete="off"></label>
+      <label>Book # in series<input id="fSeriesNo" type="number" min="0" step="0.5" inputmode="decimal"></label>
       <label>Shelf<select id="fStatus"><option value="read">Read</option><option value="reading">Reading now</option><option value="want">Want to read</option></select></label>
     </div>
     <div class="row" id="fRateRow"><span class="note">Your rating</span><span class="stars" id="fStars"></span></div>
@@ -301,7 +323,7 @@ textarea{resize:vertical;min-height:60px}
 <div class="ov" id="ov" hidden role="dialog" aria-modal="true" aria-labelledby="ctlTitle">
   <div class="ov-inner" id="ovInner">
     <div class="stage" id="stage"><div class="hb" id="hb"></div></div>
-    <div class="ctl-scroll" id="ctlScroll"><div class="ctl" id="ctl"></div></div>
+    <div class="ctl-scroll" id="ctlScroll"><section class="likes" id="likes" hidden></section><div class="ctl" id="ctl"></div></div>
   </div>
 </div>
 <input type="file" id="coverFile" accept="image/*" hidden>
@@ -319,7 +341,31 @@ let tab="read",sortBy="added";const pageOf={read:0,reading:0,want:0};
 try{tab=localStorage.getItem("kyle-bookshelf-v1-tab")||"read";sortBy=localStorage.getItem("kyle-bookshelf-v1-sort")||"added"}catch{}
 if(!["read","reading","want"].includes(tab))tab="read"; if(!SORTS[sortBy])sortBy="added";
 const shelfList=k=>books.filter(b=>b.status===k).sort(SORTS[sortBy]);
-function paginate(list,avail){const pages=[[]];let used=0;for(const b of list){const w=look(b).sw+7;if(used+w>avail&&pages[pages.length-1].length){pages.push([]);used=0}pages[pages.length-1].push(b);used+=w}return pages}
+function units(list){
+  // keep each series together, in reading order, where its first book would sit
+  const groups=new Map();for(const b of list){const k=seriesKey(b);if(k){if(!groups.has(k))groups.set(k,[]);groups.get(k).push(b)}}
+  const out=[],done=new Set();
+  for(const b of list){
+    const k=seriesKey(b);
+    if(k&&groups.get(k).length>1){if(done.has(k))continue;done.add(k);
+      out.push({set:groups.get(k)[0].series.trim(),books:groups.get(k).slice().sort((a,b)=>(+a.seriesNo||999)-(+b.seriesNo||999)||(a.added||0)-(b.added||0))})}
+    else out.push({books:[b]});
+  }
+  return out;
+}
+const unitW=u=>u.books.reduce((t,b)=>t+look(b).sw+(u.set?3:7),0)+(u.set?8:0);
+function paginate(list,avail){
+  const pages=[[]];let used=0;
+  const push=u=>{const w=unitW(u);if(used+w>avail&&pages[pages.length-1].length){pages.push([]);used=0}pages[pages.length-1].push(u);used+=w};
+  for(const u of units(list)){
+    if(unitW(u)<=avail){push(u);continue}
+    // a series longer than a whole plank gets planks of its own
+    let chunk=[];for(const b of u.books){const t={set:u.set,books:[...chunk,b]};if(chunk.length&&unitW(t)>avail){push({set:u.set,books:chunk});chunk=[]}chunk.push(b)}
+    if(chunk.length)push({set:u.set,books:chunk});
+  }
+  return pages;
+}
+const flat=pg=>pg.flatMap(u=>u.books);
 const preloaded=new Set();
 function preload(url){if(!url||preloaded.has(url))return;preloaded.add(url);const i=new Image();i.decoding="async";i.src=url}
  let books=[]; let db=null, sample=null, assets=null; let formRating=0;
@@ -329,8 +375,9 @@ const hash=s=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),1
 const fmtDate=t=>t>100000?new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"";
 
 // ---- look of a book, derived from its title (or its cover photo)
+const seriesKey=b=>b.series?b.series.trim().toLowerCase()+"|"+surname(b.author).toLowerCase():"";
 function look(b){
-  const h=hash(b.title+"|"+b.author);
+  const h=hash(b.series?"S|"+seriesKey(b):b.title+"|"+b.author);
   let [c,ci]=CLOTH[h%CLOTH.length]; let k=(h>>>5)%CLOTH.length; if(k===h%CLOTH.length)k=(k+3)%CLOTH.length;
   const [c2,ci2]=CLOTH[k];
   if(hasCover(b)&&b.coverColor){c=b.coverColor;ci=lum(c)>.55?"#1E1A16":"#F5EFE3"}
@@ -338,7 +385,8 @@ function look(b){
   return {h,c,ci,c2,ci2,tpl:(h>>>9)%4,
     sh:150+(h>>>4)%62, sw:pg?Math.round(Math.max(24,Math.min(58,16+pg/13))):28+(h>>>8)%18};
 }
-const coverURL=(b,size)=>!STANDALONE?"":b.olCid?`https://covers.openlibrary.org/b/id/${+b.olCid}-${size}.jpg`:b.olCover?b.olCover.replace(/-[SML]\.jpg$/,`-${size}.jpg`):"";
+const GB=id=>`https://books.google.com/books/content?id=${encodeURIComponent(id)}&printsec=frontcover&img=1&zoom=1`;
+const coverURL=(b,size)=>!STANDALONE?"":b.gbId?(size==="L"?GB(b.gbId)+"&fife=w800-h1200":GB(b.gbId)):b.olCid?`https://covers.openlibrary.org/b/id/${+b.olCid}-${size}.jpg`:b.olCover?b.olCover.replace(/-[SML]\.jpg$/,`-${size}.jpg`):"";
 const hasCover=b=>!!(b.coverId||coverURL(b,"M"));
 function lum(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return (0.299*r+0.587*g+0.114*b)/255}
 const surname=a=>String(a||"").trim().split(/\s+/).pop();
@@ -388,11 +436,15 @@ function render(){
   const list=shelfList(tab);
   const pgs=paginate(list,lastAvail);
   pageOf[tab]=Math.max(0,Math.min(pageOf[tab]||0,pgs.length-1));
-  const row=pgs[pageOf[tab]]||[];
+  const rowUnits=pgs[pageOf[tab]]||[]; const row=flat(rowUnits);
   const sp=$("spines");
   if(!list.length) sp.innerHTML=`<span class="empty-shelf">${tab==="want"?"Nothing queued yet. Add a book, or take one from a recommendation.":tab==="reading"?"Nothing open right now.":"Finished books land here."}</span>`;
-  const used=row.reduce((t,x)=>t+look(x).sw+7,0);
+  const used=rowUnits.reduce((t,u)=>t+unitW(u),0);
+  let holder=sp; const setOf=new Map(); rowUnits.forEach(u=>{if(u.set&&u.books.length>1)u.books.forEach(b=>setOf.set(b.id,u))});
   row.forEach((b,i)=>{
+    const u=setOf.get(b.id);
+    if(u&&u.books[0]===b){holder=document.createElement("span");holder.className="set";holder.dataset.name=u.set;holder.setAttribute("role","group");holder.setAttribute("aria-label",u.set+" series");sp.append(holder)}
+    else if(!u)holder=sp;
     const L=look(b);
     const el=document.createElement("button");
     el.className="bk"+(held&&held.id===b.id&&held.away?" gone":"")+(b.example?" example":"");
@@ -400,13 +452,13 @@ function render(){
     const lean=(i===row.length-1&&row.length>2&&lastAvail-used>60)?"-4deg":"0deg";
     el.style.cssText=`--w:${L.sw}px;--h:${L.sh}px;--c:${L.c};--ci:${L.ci};--lean:${lean}`;
     el.setAttribute("aria-label",`${b.title} by ${b.author}${b.rating?`, rated ${b.rating} of 5`:""}. Take it down.`);
-    el.innerHTML=`<span class="bk-top"></span><span class="bk-side"></span><span class="sp s${L.tpl}${hasCover(b)?" photo":""}"><span class="t">${esc(b.title)}</span><span class="a">${esc(surname(b.author))}</span></span>`;
+    el.innerHTML=`<span class="bk-top"></span><span class="bk-side"></span><span class="sp s${L.tpl}${hasCover(b)?" photo":""}"><span class="t">${esc(b.title)}</span>${b.series&&b.seriesNo?`<span class="no">${esc(b.seriesNo)}</span>`:""}<span class="a">${esc(surname(b.author))}</span></span>`;
     el.onclick=()=>pickUp(b.id,el);
     el.onpointerenter=el.onfocus=el.onpointerdown=()=>preload(coverURL(b,"L"));
     preload(coverURL(b,"M"));
-    sp.append(el);
+    holder.append(el);
   });
-  const start=pgs.slice(0,pageOf[tab]).reduce((t,p)=>t+p.length,0);
+  const start=pgs.slice(0,pageOf[tab]).reduce((t,p)=>t+flat(p).length,0);
   $("pager").hidden=pgs.length<2;
   $("pgLbl").textContent=`${start+1}–${start+row.length} of ${list.length}`;
   $("pgPrev").disabled=pageOf[tab]===0; $("pgNext").disabled=pageOf[tab]>=pgs.length-1;
@@ -456,7 +508,13 @@ function buildHeld(b){
   held.coverKey=(b.coverId||coverURL(b,"M")||"")+L.tpl;
   upgradeCover();
 }
-function upgradeCover(){const img=$("hOut")?.querySelector("img[data-hi]");if(!img)return;const hi=new Image();hi.onload=()=>{if(img.isConnected)img.src=hi.src};hi.src=img.dataset.hi}
+function upgradeCover(){
+  const img=$("hOut")?.querySelector("img[data-hi]");if(!img)return;
+  const b=books.find(x=>x.id===held?.id);
+  const cands=[img.dataset.hi]; if(b?.gbId&&b.olCid)cands.push(`https://covers.openlibrary.org/b/id/${+b.olCid}-L.jpg`);
+  let won=false;
+  for(const u of cands){const hi=new Image();hi.onload=()=>{if(!won&&img.isConnected&&hi.naturalWidth>=260){won=true;img.src=u}};hi.src=u}
+}
 function anim(el,frames,ms){
   if(RM||!el.animate)return Promise.resolve();
   return el.animate(frames,{duration:ms,easing:"cubic-bezier(.25,.75,.2,1)"}).finished.catch(()=>{});
@@ -495,7 +553,7 @@ function setOpen(v){
 async function putBack(){
   if(!held||busy)return; busy=true;
   if(held.open){setOpen(false);await new Promise(r=>setTimeout(r,RM?0:650))}
-  {const b=books.find(x=>x.id===held.id);if(b){const pages=paginate(shelfList(b.status),lastAvail);const pi=pages.findIndex(p=>p.some(x=>x.id===b.id));
+  {const b=books.find(x=>x.id===held.id);if(b){const pages=paginate(shelfList(b.status),lastAvail);const pi=pages.findIndex(p=>flat(p).some(x=>x.id===b.id));
     if(b.status!==tab||(pi>=0&&pi!==pageOf[b.status])){tab=b.status;if(pi>=0)pageOf[tab]=pi;render()}}}
   const el=document.querySelector(`.bk[data-id="${CSS.escape(held.id)}"]`);
   if(el){
@@ -538,19 +596,30 @@ function refreshHeld(){
   else if(fetching[b.id+"!"]) blurb=`<p class="wait">${esc(fetching[b.id+"!"])}</p><button class="btn small ghost" id="retryBlurb" style="justify-self:start;color:var(--paper-ink);border-color:#B9AD95">Try again</button>`;
   else if(!sample&&!STANDALONE) blurb=`<p class="wait">The blurb comes from Claude, which isn't available in this view.</p>`;
   else blurb=`<p class="wait">Open the book to read the jacket copy.</p>`;
-  const sim=(b.similar||[]).map((s,i)=>{const have=books.some(x=>x.title.toLowerCase()===String(s.title).toLowerCase());
-    return `<li><b>${esc(s.title)}</b><span class="by">${esc(s.author)}</span>${s.why?`<span>${esc(s.why)}</span>`:""}<button data-sim="${i}" ${have?"disabled":""}>${have?"On your shelves":"+ Want to read"}</button></li>`}).join("");
-  pg.innerHTML=`<h4>${b.blurb&&b.blurbSrc==="wikipedia"?"From Wikipedia":"From the jacket"}</h4>${blurb}${sim?`<h4 style="margin-top:6px">Shelve it beside</h4><ul class="sim">${sim}</ul>`:""}`;
+  pg.innerHTML=`<h4>${b.blurb&&b.blurbSrc==="wikipedia"?"From Wikipedia":"From the jacket"}</h4>${blurb}`;
   pg.scrollTop=top;
-  pg.querySelectorAll("[data-sim]").forEach(btn=>btn.onclick=async()=>{const s=b.similar[+btn.dataset.sim];btn.disabled=true;btn.textContent="On your shelves";
-    await saveBook({id:newId(),title:s.title,author:s.author,genre:s.genre||"",pages:+s.pages||0,status:"want",rating:0,added:Date.now()})});
+  renderLikes(b);
   const rb=$("retryBlurb"); if(rb)rb.onclick=()=>{delete fetching[b.id+"!"];maybeFetchBlurb(b,true)};
   refreshControls();
+}
+function renderLikes(b){
+  const box=$("likes"); const sims=b.similar||[];
+  if(!sims.length&&!fetching[b.id]){box.hidden=true;return}
+  box.hidden=false;
+  const rowScroll=box.querySelector(".lk-row")?.scrollLeft||0;
+  if(!sims.length){box.innerHTML=`<h4>If you liked this</h4><p class="wait">Finding books like this one…</p>`;return}
+  box.innerHTML=`<h4>If you liked this</h4><div class="lk-row">${sims.map((s,i)=>{
+    const have=owned(s.title); const L=look({title:s.title,author:s.author});
+    const img=STANDALONE&&s.cover?`<img src="https://covers.openlibrary.org/b/id/${+s.cover}-M.jpg" alt="" loading="lazy" onerror="this.remove()">`:"";
+    return `<div class="lk"><div class="th" style="--c:${L.c};--ci:${L.ci}">${esc(s.title)}${img}</div><b>${esc(s.title)}</b><span class="by">${esc(s.author)}</span>${s.why?`<span class="why">${esc(s.why)}</span>`:""}<button data-sim="${i}" ${have?"disabled":""}>${have?"On your shelves":"+ Want to read"}</button></div>`}).join("")}</div>`;
+  box.querySelector(".lk-row").scrollLeft=rowScroll;
+  box.querySelectorAll("[data-sim]").forEach(btn=>btn.onclick=async()=>{const s=sims[+btn.dataset.sim];btn.disabled=true;btn.textContent="On your shelves";
+    await saveBook({id:newId(),title:s.title,author:s.author,genre:s.genre||"",pages:+s.pages||0,status:"want",rating:0,added:Date.now()})});
 }
 function refreshControls(){
   const b=books.find(x=>x.id===held?.id); if(!b)return;
   const c=$("ctl");
-  const notesFocused=document.activeElement&&document.activeElement.id==="dNotes";
+  const notesFocused=document.activeElement&&["dNotes","dSeries","dSeriesNo"].includes(document.activeElement.id);
   const notesVal=notesFocused?document.activeElement.value:null;
   if(notesFocused){ // don't rebuild while typing; just refresh the open button
     const ob=$("openBtn"); if(ob)ob.textContent=held.open?"Close the book":"Open the book"; return }
@@ -558,6 +627,7 @@ function refreshControls(){
   <div class="mainrow"><button class="btn primary" id="openBtn">${held.open?"Close the book":"Open the book"}</button><button class="btn" id="backBtn">Put it back</button></div>
   <div class="row" style="justify-content:space-between"><label style="flex-direction:row;align-items:center;gap:8px">Shelf<select id="dStatus">${SHELVES.map(([k,l])=>`<option value="${k}"${k===b.status?" selected":""}>${l}</option>`).join("")}</select></label>
   <span class="stars" id="dStars"></span></div>
+  <div class="row" style="flex-wrap:nowrap"><label style="flex:1;min-width:0">Series<input id="dSeries" placeholder="e.g. The Lord of the Rings" value="${esc(b.series||"")}" autocomplete="off"></label><label style="width:76px;flex:none">Book #<input id="dSeriesNo" type="number" min="0" step="0.5" inputmode="decimal" value="${esc(b.seriesNo||"")}"></label></div>
   <label>Notes<textarea id="dNotes" placeholder="What stuck with you?">${esc(b.notes||"")}</textarea></label>
   <div class="row">${assets?`<button class="btn ghost small" id="coverBtn">${b.coverId?"Replace cover photo":"Add real cover photo"}</button>${b.coverId?`<button class="btn ghost small" id="coverDel">Use designed cover</button>`:""}`:""}
   ${confirmDel?`<span class="note">Take this book off your shelves for good?</span><button class="btn small" id="dYes" style="border-color:var(--danger);color:var(--danger)">Remove</button><button class="btn ghost small" id="dNo">Keep it</button>`:`<button class="btn ghost small" id="dDel">Remove book</button>`}</div>
@@ -567,6 +637,8 @@ function refreshControls(){
   $("backBtn").onclick=putBack;
   $("dStatus").onchange=e=>patch(b.id,{status:e.target.value,...(e.target.value==="read"&&!b.finished?{finished:Date.now()}:{})});
   $("dNotes").onchange=e=>patch(b.id,{notes:e.target.value});
+  $("dSeries").onchange=e=>patch(b.id,{series:e.target.value.trim()});
+  $("dSeriesNo").onchange=e=>patch(b.id,{seriesNo:+e.target.value||0});
   if($("coverBtn"))$("coverBtn").onclick=()=>$("coverFile").click();
   if($("coverDel"))$("coverDel").onclick=async()=>{const old=b.coverId;await patch(b.id,{coverId:null,coverColor:null});try{await assets.delete(old)}catch{}};
   if(confirmDel){$("dYes").onclick=async()=>{confirmDel=false;const id=b.id;if(b.coverId&&assets){try{await assets.delete(b.coverId)}catch{}}await removeBook(id)};$("dNo").onclick=()=>{confirmDel=false;refreshControls()}}
@@ -598,13 +670,15 @@ async function maybeFetchBlurb(b,force){
   const others=books.map(x=>`"${x.title}"`).join(", ");
   try{
     const out=await sample.json(`Write the back-cover copy for the book "${b.title}" by ${b.author}${b.genre?` (${b.genre})`:""}.
-Return ONLY a JSON object: {"blurb": string, "similar": [{"title": string, "author": string, "genre": string, "pages": number, "why": string}]}.
+Return ONLY a JSON object: {"blurb": string, "series": string or null, "seriesNo": number or null, "similar": [{"title": string, "author": string, "genre": string, "pages": number, "why": string}]}.
+- "series"/"seriesNo": the series this book belongs to and its number in it, or null if it is a standalone.
 - "blurb": 3–4 sentences in the voice of a jacket blurb, in your own words (do not reproduce the publisher's text), no spoilers past the opening premise.
 - "similar": 4 real, published books a reader of this one would enjoy, with "why" as one short sentence naming the specific shared quality. Skip these, which the reader already owns: ${others}.
 If you don't recognize the book, base the blurb on what the title and author suggest and say so briefly in the blurb.`,{modelTier:"quick"});
     const blurb=String(out?.blurb||"").trim(); const similar=Array.isArray(out?.similar)?out.similar.slice(0,5).map(s=>({title:String(s.title||""),author:String(s.author||""),genre:String(s.genre||""),pages:+s.pages||0,why:String(s.why||"")})).filter(s=>s.title):[];
     delete fetching[b.id];
-    if(blurb) await patch(b.id,{blurb,similar}); else {fetching[b.id+"!"]="No jacket copy came back.";if(held?.id===b.id)refreshHeld()}
+    const ser=!b.series&&out?.series?{series:String(out.series).trim(),seriesNo:+out.seriesNo||0}:{};
+    if(blurb) await patch(b.id,{blurb,similar,...ser}); else {fetching[b.id+"!"]="No jacket copy came back.";if(held?.id===b.id)refreshHeld()}
   }catch(e){
     delete fetching[b.id];
     fetching[b.id+"!"]=e?.code==="not_granted"?"The blurb needs your permission to ask Claude. Allow it from the page's permissions menu.":e?.code==="rate_limited"?"Too many requests just now. Wait a minute.":"Couldn't get the jacket copy.";
@@ -620,7 +694,7 @@ setFormRating(0);
 $("addForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const status=$("fStatus").value;
-  const b={id:newId(),title:$("fTitle").value.trim(),author:$("fAuthor").value.trim(),genre:$("fGenre").value.trim(),pages:+$("fPages").value||0,status,rating:status==="read"?formRating:0,added:Date.now(),...(status==="read"?{finished:Date.now()}:{})};
+  const b={id:newId(),title:$("fTitle").value.trim(),author:$("fAuthor").value.trim(),genre:$("fGenre").value.trim(),pages:+$("fPages").value||0,series:$("fSeries").value.trim(),seriesNo:+$("fSeriesNo").value||0,status,rating:status==="read"?formRating:0,added:Date.now(),...(status==="read"?{finished:Date.now()}:{})};
   if(!b.title||!b.author)return;
   tab=status;pageOf[status]=1e9;
   e.target.reset();setFormRating(0);$("fRateRow").hidden=false;$("addForm").hidden=true;
@@ -650,10 +724,12 @@ function readGoodreads(text){
   const out=[];
   for(const r of rows.slice(1)){
     const status=SHELFMAP[g(r,"Exclusive Shelf")];if(!status)continue;
-    const title=g(r,"Title").replace(/\s*\([^)]*#[\d.]+[^)]*\)\s*$/,"");if(!title)continue;
+    const rawT=g(r,"Title"); const sm=rawT.match(/\(([^()]*#\s*[\d.]+[^()]*)\)\s*$/);
+    let series="",seriesNo=0; if(sm){const m2=sm[1].split(";")[0].match(/^(.*?),?\s*#\s*([\d.]+)/); if(m2){series=m2[1].trim();seriesNo=+m2[2]}}
+    const title=rawT.replace(/\s*\([^)]*#[\d.]+[^)]*\)\s*$/,"");if(!title)continue;
     const dr=g(r,"Date Read")||g(r,"Date Added");const ts=dr?Date.parse(dr.replace(/\//g,"-")):NaN;
     const shelves=g(r,"Bookshelves").split(",").map(s=>s.trim()).filter(s=>s&&!SHELFMAP[s]&&s!=="favorites");
-    out.push({grId:g(r,"Book Id")||keyOf(title,g(r,"Author")),title,author:g(r,"Author"),
+    out.push({grId:g(r,"Book Id")||keyOf(title,g(r,"Author")),title,author:g(r,"Author"),series,seriesNo,
       genre:shelves[0]?shelves[0].replace(/-/g," "):"",pages:+g(r,"Number of Pages")||0,status,
       rating:status==="read"?(+g(r,"My Rating")||0):0,
       review:g(r,"My Review").replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,""),
@@ -682,9 +758,10 @@ async function runGrImport(){
   for(const x of grPending){
     const id="gr"+String(x.grId).replace(/[^A-Za-z0-9_-]/g,"");
     const existing=books.find(b=>b.id===id);
-    if(existing){jobs.push({...existing,status:x.status,rating:x.rating||existing.rating||0,pages:x.pages||existing.pages,...(x.ts&&x.status==="read"?{finished:x.ts}:{})});continue}
-    if(byKey.has(keyOf(x.title,x.author)))continue;
-    jobs.push({id,title:x.title,author:x.author,genre:x.genre,pages:x.pages,status:x.status,rating:x.rating,notes:x.review,added:x.ts||Date.now(),...(x.status==="read"&&x.ts?{finished:x.ts}:{}),source:"goodreads"});
+    if(existing){jobs.push({...existing,status:x.status,rating:x.rating||existing.rating||0,pages:x.pages||existing.pages,...(x.series?{series:x.series,seriesNo:x.seriesNo}:{}),...(x.ts&&x.status==="read"?{finished:x.ts}:{})});continue}
+    const same=byKey.get(keyOf(x.title,x.author));
+    if(same){if(x.series&&!same.series)jobs.push({...same,series:x.series,seriesNo:x.seriesNo});continue}
+    jobs.push({id,title:x.title,author:x.author,series:x.series,seriesNo:x.seriesNo,genre:x.genre,pages:x.pages,status:x.status,rating:x.rating,notes:x.review,added:x.ts||Date.now(),...(x.status==="read"&&x.ts?{finished:x.ts}:{}),source:"goodreads"});
   }
   let done=0,failed=0;
   const worker=async()=>{while(jobs.length){const b=jobs.shift();try{await saveBook(b)}catch{failed++}done++;st.textContent=`Shelving… ${done} books`}};
@@ -765,6 +842,20 @@ async function olLookup(b){
   }
   return f;
 }
+async function gbLookup(b){
+  const st=shortTitle(b.title), sn=surname(b.author);
+  const q=new URLSearchParams({q:`intitle:${qq(st)} inauthor:${qq(sn)}`,langRestrict:"en",printType:"books",maxResults:"6",
+    fields:"items(id,volumeInfo(title,authors,imageLinks/thumbnail,language,description,pageCount))"});
+  const r=await fetch("https://www.googleapis.com/books/v1/volumes?"+q); if(!r.ok)return {};
+  const items=(await r.json()).items||[];
+  const norm=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,"");
+  const want=norm(st).slice(0,12);
+  const pick=items.find(i=>i.volumeInfo?.imageLinks?.thumbnail&&(i.volumeInfo.language||"en")==="en"&&norm(i.volumeInfo.title).startsWith(want))
+    ||items.find(i=>i.volumeInfo?.imageLinks?.thumbnail&&(i.volumeInfo.language||"en")==="en");
+  if(!pick)return {};
+  const desc=String(pick.volumeInfo.description||"").replace(/<br\s*\/?>/gi,"\n").replace(/<\/p>/gi,"\n\n").replace(/<[^>]+>/g,"").replace(/&quot;/g,'"').replace(/&amp;/g,"&").replace(/&#39;/g,"'").trim();
+  return {gbId:pick.id,gbDesc:desc,gbPages:pick.volumeInfo.pageCount||0};
+}
 async function wikiBlurb(b){
   const st=shortTitle(b.title), sn=surname(b.author).toLowerCase();
   for(const cand of [`${st} (novel)`,`${st} (book)`,st]){
@@ -780,14 +871,23 @@ async function wikiBlurb(b){
   return "";
 }
 let coverRun=false;
+let coverAgain=false;
 async function findCovers(){
-  if(!STANDALONE||coverRun)return; coverRun=true;
+  if(!STANDALONE)return; if(coverRun){coverAgain=true;return} coverRun=true; coverAgain=false;
   try{
-    for(const b of books.filter(x=>x.olv!==3&&!x.coverId)){
-      try{const f=await olLookup(b);if(/^Open Library doesn't have/.test(b.blurb||""))f.blurb=null;Object.assign(b,f); lsSave(); render();}catch{}
-      await new Promise(r=>setTimeout(r,300));
-    }
-  }finally{coverRun=false}
+    const queue=books.filter(x=>x.olv!==4&&!x.coverId);
+    const work=async()=>{while(queue.length){const b=queue.shift();
+      try{
+        const [g,o]=await Promise.all([gbLookup(b).catch(()=>({})),olLookup(b).catch(()=>({olv:3}))]);
+        const f={...o,...g,olv:4};
+        if(/^Open Library doesn't have/.test(b.blurb||""))f.blurb=null;
+        if(g.gbId){preload(GB(g.gbId));const col=await avgColor(GB(g.gbId));if(col)f.coverColor=col}
+        if(!b.pages&&g.gbPages)f.pages=g.gbPages;
+        Object.assign(b,f); lsSave(); render(); if(held?.id===b.id)refreshHeld();
+      }catch{}
+    }};
+    await Promise.all([work(),work(),work()]);
+  }finally{coverRun=false; if(coverAgain)setTimeout(findCovers,0)}
 }
 function avgColor(url){return new Promise(res=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>{try{const cv=document.createElement("canvas");cv.width=cv.height=16;const x=cv.getContext("2d");x.drawImage(im,0,0,16,16);const d=x.getImageData(0,0,16,16).data;let r=0,g=0,bl=0;for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];bl+=d[i+2]}const n=d.length/4;res("#"+[r,g,bl].map(v=>Math.round(v/n).toString(16).padStart(2,"0")).join(""))}catch{res(null)}};im.onerror=()=>res(null);im.src=url})}
 function cleanDesc(d){
@@ -801,19 +901,24 @@ async function subjectBooks(subject,limit){
   return ((await olJSON(OL+"/search.json?"+q))?.docs||[]).filter(d=>d.title&&d.author_name);
 }
 async function olBlurb(b,force){
-  if(b.blurb&&!/^Open Library doesn't have/.test(b.blurb))return;
+  if(b.blurb&&!/^Open Library doesn't have/.test(b.blurb)&&b.similar?.length)return;
   if(fetching[b.id]||(!force&&fetching[b.id+"!"]))return;
   fetching[b.id]=true; if(held?.id===b.id)refreshHeld();
   try{
     let cur=books.find(x=>x.id===b.id)||b;
     let blurb="",subjects=cur.olSubjects||[];
     let src="openlibrary";
-    if(cur.olv!==3){Object.assign(cur,await olLookup(cur));lsSave();}
-    if(cur.olKey){
+    const hadBlurb=cur.blurb&&!/^Open Library doesn't have/.test(cur.blurb);
+    if(cur.olv!==4&&cur.olv!==3){Object.assign(cur,await olLookup(cur));lsSave();}
+    if(hadBlurb){blurb=cur.blurb;src=cur.blurbSrc||"openlibrary"}
+    else if(cur.gbDesc&&cur.gbDesc.length>80){blurb=cur.gbDesc;src="google"}
+    else if(cur.olKey){
       const w=await olJSON(OL+cur.olKey+".json");
       blurb=cleanDesc(w.description);
       if(!subjects.length)subjects=goodSubjects(w.subjects);
     }
+    if(!blurb&&cur.gbDesc){blurb=cur.gbDesc;src="google"}
+    if(!subjects.length&&cur.olKey){try{subjects=goodSubjects((await olJSON(OL+cur.olKey+".json")).subjects)}catch{}}
     if(!blurb&&cur.olEd){try{blurb=cleanDesc((await olJSON(OL+cur.olEd+".json")).description)}catch{}}
     if(!blurb){blurb=await wikiBlurb(cur);src="wikipedia"}
     const similar=[];const seen=new Set([cur.title.toLowerCase()]);
