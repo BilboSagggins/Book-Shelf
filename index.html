@@ -102,6 +102,24 @@ textarea{resize:vertical;min-height:60px}
 .pager{display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--paper)}
 .pager button{width:34px;height:34px;border-radius:50%;border:1px solid var(--plank);background:var(--wall-deep);color:var(--paper);font-size:18px;line-height:1;padding:0}
 .pager button:disabled{opacity:.3;cursor:default}
+.find{display:flex;gap:8px;padding:0 2px 10px}
+.find input{flex:1;min-width:0;background:var(--wall-deep);color:var(--paper);border:1px solid var(--plank-edge);border-radius:3px;padding:8px 10px;font-size:15px}
+.find input::placeholder{color:var(--plank-top)}
+.find button{flex:none;background:var(--wall-deep);color:var(--paper);border:1px solid var(--plank-edge);border-radius:3px;padding:8px 12px;font-size:14px}
+.find button[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+.results{background:var(--wall-deep);border-radius:3px;max-height:min(52vh,480px);overflow-y:auto;overscroll-behavior:contain;padding:4px;display:flex;flex-direction:column}
+.results .rcount{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--plank-top);padding:6px 8px 4px}
+.results .empty{color:var(--plank-top);padding:18px 10px;font-size:14px}
+.res{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:12px;align-items:center;padding:7px 8px;border:0;border-radius:3px;background:none;color:var(--paper);text-align:left;width:100%}
+.res:hover,.res:focus-visible{background:rgba(255,255,255,.07)}
+.res .th{width:38px;height:57px;border-radius:2px;background:var(--c);position:relative;overflow:hidden;box-shadow:1px 2px 5px rgba(0,0,0,.4)}
+.res .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.res .ti{font-family:var(--f-display);font-size:15px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.res .meta{font-size:12px;color:var(--plank-top);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res .side{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:11px}
+.res .pill{font-family:var(--f-mono);letter-spacing:.04em;text-transform:uppercase;font-size:10px;border:1px solid var(--plank);border-radius:20px;padding:2px 7px;color:var(--paper);white-space:nowrap}
+.res .st{color:var(--brass);letter-spacing:1px}
+.res mark{background:none;color:var(--brass)}
 
 .bk{position:relative;flex:none;padding:0;border:0;background:none;width:var(--w);height:var(--h);margin-right:5px;
   transform-origin:50% 100%;transform:rotateZ(var(--lean,0deg));transition:transform .25s cubic-bezier(.2,.7,.2,1)}
@@ -337,6 +355,7 @@ const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
 let lastShelfWidth=0, lastAvail=600;
 const SORT_LABELS={added:"Shelf order",rating:"Your rating",title:"Title",author:"Author"};
 const SORTS={added:(a,b)=>(a.added||0)-(b.added||0),rating:(a,b)=>(b.rating||0)-(a.rating||0)||(a.added||0)-(b.added||0),title:(a,b)=>a.title.localeCompare(b.title),author:(a,b)=>surname(a.author).localeCompare(surname(b.author))||a.title.localeCompare(b.title)};
+let query="",browseAll=false;
 let tab="read",sortBy="added";const pageOf={read:0,reading:0,want:0};
 try{tab=localStorage.getItem("kyle-bookshelf-v1-tab")||"read";sortBy=localStorage.getItem("kyle-bookshelf-v1-sort")||"added"}catch{}
 if(!["read","reading","want"].includes(tab))tab="read"; if(!SORTS[sortBy])sortBy="added";
@@ -427,8 +446,12 @@ function render(){
 
   const wrap=$("shelves");
   const counts=Object.fromEntries(SHELVES.map(([k])=>[k,books.filter(b=>b.status===k).length]));
+  const fIn=$("findIn"); const hadFocus=fIn&&document.activeElement===fIn; const caret=hadFocus?fIn.selectionStart:0;
+  const resTop=$("results")?.scrollTop||0;
   wrap.innerHTML=`<div class="case-top"><div class="tabs" role="tablist" aria-label="Shelves">${SHELVES.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===tab}">${l}<span>${counts[k]}</span></button>`).join("")}</div>
     <label class="sortl">Sort<select id="sortSel">${Object.entries(SORT_LABELS).map(([k,l])=>`<option value="${k}"${k===sortBy?" selected":""}>${l}</option>`).join("")}</select></label></div>
+    <div class="find" role="search"><input id="findIn" type="search" placeholder="Search title, author or series" aria-label="Search your books" autocomplete="off" value="${esc(query)}"><button id="allBtn" aria-pressed="${browseAll}">All books</button></div>
+    <div class="results" id="results" hidden></div>
     <div class="nook" id="nook"><div class="spines" id="spines"></div></div><div class="lip"></div>
     <div class="case-foot"><span>Tap a spine to take a book down</span><div class="pager" id="pager"><button id="pgPrev" aria-label="Previous books">‹</button><span id="pgLbl"></span><button id="pgNext" aria-label="More books">›</button></div></div>`;
   lastShelfWidth=wrap.clientWidth;
@@ -470,7 +493,47 @@ function render(){
   nook.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});
   nook.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;
     if(Math.abs(dx)>50){const n=pageOf[tab]+(dx<0?1:-1);if(n>=0&&n<pgs.length){pageOf[tab]=n;render()}}});
+  const fi=$("findIn");
+  fi.oninput=()=>{query=fi.value;showResults()};
+  fi.onkeydown=e=>{if(e.key==="Escape"){query="";browseAll=false;render();}else if(e.key==="Enter"){const first=$("results").querySelector(".res");if(first){e.preventDefault();first.click()}}};
+  $("allBtn").onclick=()=>{browseAll=!browseAll;if(!browseAll)query="";render();if(browseAll)$("findIn").focus({preventScroll:true})};
+  showResults(resTop);
+  if(hadFocus){fi.focus({preventScroll:true});try{fi.setSelectionRange(caret,caret)}catch{}}
   if(held)refreshHeld();
+}
+
+// ---- search / all books
+const fold=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function hl(text,q){const t=String(text||"");if(!q)return esc(t);const i=fold(t).indexOf(q);if(i<0)return esc(t);return esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+esc(t.slice(i+q.length))}
+function showResults(keepTop){
+  const on=browseAll||query.trim().length>0;
+  const box=$("results"); if(!box)return;
+  box.hidden=!on; ["nook","pager"].forEach(id=>{const e=$(id);if(e)e.closest(id==="nook"?".nook":".case-foot").hidden=on});
+  const lip=$("shelves").querySelector(".lip"); if(lip)lip.hidden=on;
+  $("allBtn").setAttribute("aria-pressed",String(browseAll));
+  if(!on){box.innerHTML="";return}
+  const q=fold(query.trim());
+  const terms=q.split(/\s+/).filter(Boolean);
+  const order={read:0,reading:1,want:2};
+  const hits=books.filter(b=>{const hay=fold([b.title,b.author,b.series,b.genre].join(" "));return terms.every(t=>hay.includes(t))})
+    .sort((a,b)=>(order[a.status]-order[b.status])||SORTS[sortBy](a,b));
+  const label=Object.fromEntries(SHELVES);
+  box.innerHTML=`<div class="rcount">${q?`${hits.length} of ${books.length} books match`:`All ${books.length} books`}</div>`+(hits.length?hits.map(b=>{
+    const L=look(b); const u=coverURL(b,"M");
+    return `<button class="res" data-id="${esc(b.id)}"><span class="th" style="--c:${L.c}">${u?`<img src="${esc(u)}" alt="" loading="lazy" onerror="this.remove()">`:""}</span>
+      <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ti">${hl(b.title,terms[0])}</span><span class="meta">${hl(b.author,terms[0])}${b.series?` · ${hl(b.series,terms[0])}${b.seriesNo?" #"+esc(b.seriesNo):""}`:""}</span></span>
+      <span class="side"><span class="pill">${esc(label[b.status]||"")}</span>${b.rating?`<span class="st" aria-label="Rated ${b.rating} of 5">${"★".repeat(b.rating)}</span>`:""}</span></button>`}).join(""):
+    `<div class="empty">No books match “${esc(query.trim())}”. Try part of a title or the author's last name.</div>`);
+  if(keepTop)box.scrollTop=keepTop;
+  box.querySelectorAll(".res").forEach(r=>r.onclick=()=>openFromSearch(r.dataset.id));
+}
+function openFromSearch(id){
+  const b=books.find(x=>x.id===id); if(!b)return;
+  query="";browseAll=false;tab=b.status;
+  const pages=paginate(shelfList(tab),lastAvail);const pi=pages.findIndex(p=>flat(p).some(x=>x.id===id)); if(pi>=0)pageOf[tab]=pi;
+  render();
+  const el=document.querySelector(`.bk[data-id="${CSS.escape(id)}"]`);
+  if(el){el.scrollIntoView({block:"nearest"});requestAnimationFrame(()=>pickUp(id,el))}
 }
 
 // ---- cover art

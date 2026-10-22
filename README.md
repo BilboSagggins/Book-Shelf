@@ -3,6 +3,7 @@
 A 3D bookcase for tracking what you read. Live at **https://bilbosagggins.github.io/Book-Shelf/** once GitHub Pages is on.
 
 - Three shelves: **Read**, **Reading now**, **Want to read**, one at a time as tabs. Page through a full shelf with the arrows or by swiping, and sort by shelf order, rating, title or author. Books in a series sit together in reading order as a matched set (series and number come from your Goodreads import, or set them on any book). The bookcase stays pinned at the top while the rest of the page scrolls.
+- **Search** by title, author or series across every shelf, or tap **All books** for the full list. Tap a result to jump to it and take it down.
 - Tap a spine to take the book down and see its cover. Open it for the jacket blurb and similar books.
 - Rate books, add notes, and move them between shelves.
 - **Recommendations** come from the subjects of the books you rated highest.
